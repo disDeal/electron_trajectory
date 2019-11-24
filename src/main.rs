@@ -72,33 +72,37 @@ fn gradient(func: impl Fn(Vec3d) -> f64, r: Vec3d) -> Vec3d {
 }
 
 fn main() {
-    let model = Model::Quantum;
+    let mut model = Model::Quantum;
     let center = Vec3d::new(0., 0., 0.);
 
     let mut rng = rand::thread_rng();
     let roots_size = ROOT_PARTICLES.len();
 
-    for i in 0..N_TJR {
-        let name = match model {
-            Model::Quantum => format!("out2/bmd_{:05}.trj", i),
-            Model::Classic => format!("out2/cmd_{:05}.trj", i),
-        };
-        let mut file = std::io::BufWriter::new(std::fs::File::create(name).unwrap());
-        let mut r = random_spec_sphere(1.) + ROOT_PARTICLES[rng.gen_range(0, roots_size)];
-        let mut rprev = r + random_spec_sphere(dx);
-        let mut t = 0.;
-        while t <= TMAX && r.distance(center) <= RMAX {
-            let mut force = -gradient(apply_energy(u_c), r);
-            if model == Model::Quantum {
-                force -= gradient(apply_energy(u_q), r);
-            }
-            let rnew = r * 2. - rprev + (force / MASS) * dt * dt;
-            rprev = r;
-            r = rnew;
-            file.write(&r.to_string().as_bytes()).unwrap();
+    for _ in 0..2 {
+        for i in 0..N_TJR {
+            let name = match model {
+                Model::Quantum => format!("out2/bmd_{:05}.trj", i),
+                Model::Classic => format!("out2/cmd_{:05}.trj", i),
+            };
+            let mut file = std::io::BufWriter::new(std::fs::File::create(name).unwrap());
+            let mut r = random_spec_sphere(1.) + ROOT_PARTICLES[rng.gen_range(0, roots_size)];
+            let mut rprev = r + random_spec_sphere(dx);
+            let mut t = 0.;
+            while t <= TMAX && r.distance(center) <= RMAX {
+                let mut force = -gradient(apply_energy(u_c), r);
+                if model == Model::Quantum {
+                    force -= gradient(apply_energy(u_q), r);
+                }
+                let rnew = r * 2. - rprev + (force / MASS) * dt * dt;
+                rprev = r;
+                r = rnew;
+                file.write(&r.to_string().as_bytes()).unwrap();
 
-            t += dt;
+                t += dt;
+            }
         }
+
+        model = Model::Classic;
     }
 }
 
