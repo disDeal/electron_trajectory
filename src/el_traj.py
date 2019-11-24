@@ -2,7 +2,7 @@ from math import *
 import numpy as np
 
 cutoff = 5.0e-4
-Quantum = False
+Quantum = True
 
 
 def dist(r1, r2):
@@ -21,6 +21,7 @@ rH = []
 #rH.append(np.array([ 0.0, 0.0, 0.0]))
 
 # h2
+
 rH.append(np.array([-1.0, 0.0, 0.0]))
 rH.append(np.array([+1.0, 0.0, 0.0]))
 
