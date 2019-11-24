@@ -1,8 +1,20 @@
+#[macro_use]
+extern crate lazy_static;
+
 use rand::Rng;
 use std::io::Write;
 
 mod vec3d;
 use vec3d::Vec3d;
+
+lazy_static! {
+    static ref ROOT_PARTICLES: Vec<Vec3d> = {
+        let mut acc = Vec::new();
+        acc.push(Vec3d::new(-1., 0., 0.));
+        acc.push(Vec3d::new(1., 0., 0.));
+        acc
+    };
+}
 
 enum Model {
     Classic,
@@ -15,6 +27,7 @@ const dx: f64 = 0.001;
 
 const N_TJR: usize = 30;
 const MASS: f64 = 1.;
+const hbar: f64 = 1.;
 const Q_el: f64 = 1.6e-19;
 
 fn U_c(r: Vec3d, r0: Vec3d) -> f64 {
@@ -28,7 +41,11 @@ fn U_c(r: Vec3d, r0: Vec3d) -> f64 {
 
 fn U_q(r: Vec3d, r0: Vec3d) -> f64 {
     let dist = r.distance(r0);
-    -2.0 * (-dist).exp() / dist
+    (-0.5 * hbar / MASS) * -2.0 * (-dist).exp() / dist
+}
+
+fn apply_force(func: impl Fn(Vec3d, Vec3d) -> Vec3d, r0: Vec3d) -> Vec3d {
+    ROOT_PARTICLES.iter().map(|&r| func(r0, r)).sum()
 }
 
 fn gradient(func: impl Fn(Vec3d) -> Vec3d, r: Vec3d) -> Vec<Vec3d> {
@@ -42,10 +59,11 @@ fn main() {
         Model::Quantum => format!("out2/bmd_{}.trj", 1),
         Model::Classic => format!("out2/cmd_{}.trj", 1),
     };
+
     let mut file = std::io::BufWriter::new(std::fs::File::create(name).unwrap());
 
     let point = random_spec_sphere(10.);
-    file.write_all(&point.to_string().as_bytes()).unwrap();
+    file.write(&point.to_string().as_bytes()).unwrap();
 }
 
 impl std::fmt::Display for Vec3d {

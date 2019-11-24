@@ -295,6 +295,26 @@ impl<T: Scalar> From<[T; 3]> for Vec3d {
     }
 }
 
+impl std::iter::Sum<Self> for Vec3d {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        iter.fold(
+            Self {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            |a, b| Self {
+                x: a.x + b.x,
+                y: a.y + b.y,
+                z: a.z + b.z,
+            },
+        )
+    }
+}
+
 // impl<T: Scalar> From<cgmath::Point2<T>> for Vec3d {
 //     fn from(other: cgmath::Point2<T>) -> Vec3d {
 //         Vec3d::new2d(other[0], other[1])
