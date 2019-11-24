@@ -1,3 +1,4 @@
+#![allow(non_upper_case_globals)]
 #[macro_use]
 extern crate lazy_static;
 
@@ -30,26 +31,35 @@ const MASS: f64 = 1.;
 const hbar: f64 = 1.;
 const Q_el: f64 = 1.6e-19;
 
-fn U_c(r: Vec3d, r0: Vec3d) -> f64 {
+fn u_c(r: Vec3d, r0: Vec3d) -> f64 {
     let dist = r.distance(r0);
     if { dist >= CUTOFF } {
-        dist
+        -1. / dist
     } else {
         0.
     }
 }
 
-fn U_q(r: Vec3d, r0: Vec3d) -> f64 {
+fn u_q(r: Vec3d, r0: Vec3d) -> f64 {
     let dist = r.distance(r0);
     (-0.5 * hbar / MASS) * -2.0 * (-dist).exp() / dist
 }
 
-fn apply_force(func: impl Fn(Vec3d, Vec3d) -> Vec3d, r0: Vec3d) -> Vec3d {
+fn calc_force(func: impl Fn(Vec3d, Vec3d) -> Vec3d, r0: Vec3d) -> Vec3d {
     ROOT_PARTICLES.iter().map(|&r| func(r0, r)).sum()
 }
 
-fn gradient(func: impl Fn(Vec3d) -> Vec3d, r: Vec3d) -> Vec<Vec3d> {
-    Vec::new()
+fn gradient(func: impl Fn(Vec3d) -> Vec3d, r: Vec3d) -> Vec3d {
+    let mut grad = [0f64; 3];
+    for i in 0..grad.len() {
+        let mut dr = [0f64; 3];
+        dr[i] = dx;
+        let dr = Vec3d::from(dr);
+
+        grad += (func(r + dr) - func(r - dr)) / (2. * dx);
+    }
+
+    grad.into()
 }
 
 fn main() {

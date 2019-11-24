@@ -187,6 +187,14 @@ impl AddAssign for Vec3d {
     }
 }
 
+impl AddAssign<Vec3d> for [f64; 3] {
+    fn add_assign(&mut self, other: Vec3d) {
+        self[0] = self[0] + other.x;
+        self[1] = self[1] + other.y;
+        self[2] = self[2] + other.z;
+    }
+}
+
 impl Add for Vec3d {
     type Output = Vec3d;
 
