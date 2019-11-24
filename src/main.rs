@@ -24,7 +24,7 @@ enum Model {
 }
 
 const CUTOFF: f64 = 5.0e-4;
-const TMAX: f64 = 20.;
+const TMAX: f64 = 30.;
 const dt: f64 = 0.001;
 const RMAX: f64 = 10.;
 const dx: f64 = 0.001;
@@ -32,41 +32,47 @@ const dx: f64 = 0.001;
 const N_TJR: usize = 30;
 const MASS: f64 = 1.;
 const hbar: f64 = 1.;
-const Q_el: f64 = 1.6e-19;
+// const Q_el: f64 = 1.6e-19;
+// const Q_el: f64 = 4.803204673e-10;
+const Q_el: f64 = 1.;
 
-fn u_c(r: Vec3d, r0: Vec3d) -> Vec3d {
+fn u_c(r: Vec3d, r0: Vec3d) -> f64 {
     let dist = r.distance(r0);
     if { dist >= CUTOFF } {
-        Vec3d::one() * -1. / dist
+        -Q_el * Q_el / dist
     } else {
-        Vec3d::one() * -1. / CUTOFF
+        -Q_el * Q_el / CUTOFF
     }
 }
 
-fn u_q(r: Vec3d, r0: Vec3d) -> Vec3d {
+fn u_q(r: Vec3d, r0: Vec3d) -> f64 {
     let dist = r.distance(r0);
-    Vec3d::one() * (-0.5 * hbar / MASS) * -2.0 * (-dist).exp() / dist
+    if { dist >= CUTOFF } {
+        (-0.5 * hbar / MASS) * -2.0 * (-dist).exp() / dist
+    } else {
+        (-0.5 * hbar / MASS) * -2.0 * (-CUTOFF).exp() / CUTOFF
+    }
 }
 
-fn calc_force(func: impl Fn(Vec3d, Vec3d) -> Vec3d) -> impl Fn(Vec3d) -> Vec3d {
+fn apply_energy(func: impl Fn(Vec3d, Vec3d) -> f64) -> impl Fn(Vec3d) -> f64 {
     move |r0| ROOT_PARTICLES.iter().map(|&r| func(r0, r)).sum()
 }
 
-fn gradient(func: impl Fn(Vec3d) -> Vec3d, r: Vec3d) -> Vec3d {
+fn gradient(func: impl Fn(Vec3d) -> f64, r: Vec3d) -> Vec3d {
     let mut grad = [0f64; 3];
     for i in 0..grad.len() {
         let mut dr = [0f64; 3];
         dr[i] = dx;
         let dr = Vec3d::from(dr);
 
-        grad += (func(r + dr) - func(r - dr)) / (2. * dx);
+        grad[i] += (func(r + dr) - func(r - dr)) / (2. * dx);
     }
 
     grad.into()
 }
 
 fn main() {
-    let model = Model::Classic;
+    let model = Model::Quantum;
     let center = Vec3d::new(0., 0., 0.);
 
     let mut rng = rand::thread_rng();
@@ -82,9 +88,9 @@ fn main() {
         let mut rprev = r + random_spec_sphere(dx);
         let mut t = 0.;
         while t <= TMAX && r.distance(center) <= RMAX {
-            let mut force = -gradient(calc_force(u_c), r);
+            let mut force = -gradient(apply_energy(u_c), r);
             if model == Model::Quantum {
-                force -= gradient(calc_force(u_q), r);
+                force -= gradient(apply_energy(u_q), r);
             }
             let rnew = r * 2. - rprev + (force / MASS) * dt * dt;
             rprev = r;
