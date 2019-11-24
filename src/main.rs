@@ -17,13 +17,16 @@ lazy_static! {
     };
 }
 
+#[derive(PartialEq)]
 enum Model {
     Classic,
     Quantum,
 }
 
 const CUTOFF: f64 = 5.0e-4;
+const TMAX: f64 = 2.;
 const dt: f64 = 0.001;
+const RMAX: f64 = 10.;
 const dx: f64 = 0.001;
 
 const N_TJR: usize = 30;
@@ -31,22 +34,22 @@ const MASS: f64 = 1.;
 const hbar: f64 = 1.;
 const Q_el: f64 = 1.6e-19;
 
-fn u_c(r: Vec3d, r0: Vec3d) -> f64 {
+fn u_c(r: Vec3d, r0: Vec3d) -> Vec3d {
     let dist = r.distance(r0);
     if { dist >= CUTOFF } {
-        -1. / dist
+        Vec3d::one() * -1. / dist
     } else {
-        0.
+        Vec3d::zero()
     }
 }
 
-fn u_q(r: Vec3d, r0: Vec3d) -> f64 {
+fn u_q(r: Vec3d, r0: Vec3d) -> Vec3d {
     let dist = r.distance(r0);
-    (-0.5 * hbar / MASS) * -2.0 * (-dist).exp() / dist
+    Vec3d::one() * (-0.5 * hbar / MASS) * -2.0 * (-dist).exp() / dist
 }
 
-fn calc_force(func: impl Fn(Vec3d, Vec3d) -> Vec3d, r0: Vec3d) -> Vec3d {
-    ROOT_PARTICLES.iter().map(|&r| func(r0, r)).sum()
+fn calc_force(func: impl Fn(Vec3d, Vec3d) -> Vec3d, r0: Vec3d) -> impl Fn(Vec3d) -> Vec3d {
+    move |r0| ROOT_PARTICLES.iter().map(|&r| func(r0, r)).sum()
 }
 
 fn gradient(func: impl Fn(Vec3d) -> Vec3d, r: Vec3d) -> Vec3d {
@@ -64,16 +67,33 @@ fn gradient(func: impl Fn(Vec3d) -> Vec3d, r: Vec3d) -> Vec3d {
 
 fn main() {
     let model = Model::Quantum;
+    let center = Vec3d::new(0., 0., 0.);
 
-    let name = match model {
-        Model::Quantum => format!("out2/bmd_{}.trj", 1),
-        Model::Classic => format!("out2/cmd_{}.trj", 1),
-    };
+    let mut rng = rand::thread_rng();
+    let roots_size = ROOT_PARTICLES.len();
 
-    let mut file = std::io::BufWriter::new(std::fs::File::create(name).unwrap());
+    for i in 0..N_TJR {
+        let name = match model {
+            Model::Quantum => format!("out2/bmd_{:05}.trj", i),
+            Model::Classic => format!("out2/cmd_{:05}.trj", i),
+        };
+        let mut file = std::io::BufWriter::new(std::fs::File::create(name).unwrap());
+        let mut r = random_spec_sphere(10.) + ROOT_PARTICLES[rng.gen_range(0, roots_size)];
+        let mut rprev = r + random_spec_sphere(dx);
+        let mut t = 0.;
+        while t <= TMAX && r.distance(center) <= RMAX {
+            let mut force = -gradient(calc_force(u_c, center), r);
+            if model == Model::Quantum {
+                force -= gradient(calc_force(u_q, r), r);
+            }
+            let rnew = r * 2. - rprev + (force / MASS) * dt * dt;
+            rprev = r;
+            r = rnew;
+            file.write(&r.to_string().as_bytes()).unwrap();
 
-    let point = random_spec_sphere(10.);
-    file.write(&point.to_string().as_bytes()).unwrap();
+            t += dt;
+        }
+    }
 }
 
 impl std::fmt::Display for Vec3d {

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use rand::{thread_rng, Rng};
-use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 use std::{cmp, fmt};
 
 // extern crate cgmath;
@@ -184,6 +184,14 @@ impl AddAssign for Vec3d {
         self.x = self.x + other.x;
         self.y = self.y + other.y;
         self.z = self.z + other.z;
+    }
+}
+
+impl SubAssign for Vec3d {
+    fn sub_assign(&mut self, other: Vec3d) {
+        self.x = self.x - other.x;
+        self.y = self.y - other.y;
+        self.z = self.z - other.z;
     }
 }
 
