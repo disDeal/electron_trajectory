@@ -1,1 +1,1 @@
- cargo run --release; cd out2; gnuplot traj_print.gp;cd ..
+cargo run --release; cd out2; gnuplot traj_print.gp;cd ..
